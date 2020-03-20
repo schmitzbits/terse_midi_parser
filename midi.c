@@ -30,11 +30,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
 */
 
 
 #include <stdio.h>
 #include <inttypes.h>
+#include <stdlib.h>
 
 #include "midi.h"
 
@@ -43,11 +45,12 @@ uint8_t our_channel = 0x01;
 
 uint8_t midi_get_byte(){
 	int val = 0;
-	char str [80];
+	char str[80];
 	printf(">");
+	fflush(stdout);
 	if (fgets(str, 80, stdin)!=NULL){
 		sscanf(str, "%02x", &val);
-		//printf("%d", val);
+//		printf("%s", str);
 	}
 	return val;
 }
@@ -201,9 +204,12 @@ void midi_parse(uint8_t x){
 	uint8_t type = runstat & 0xf0;
 	uint8_t rec_channel = runstat & 0x0f;
 	
-	//adjust if you want to receive on more than one channel
-	if (rec_channel != our_channel) return;
-	
+    //adjust if you want to receive on more than one channel
+    if (rec_channel != our_channel) {
+        printf("Message is not for channel 1\n");
+        return;
+    }
+
 	// at this point our message is complete, and db1 and db2 hold the respective data bytes
 	// if there is only one byte, since its the last, it is contained in db2
 	
@@ -234,11 +240,14 @@ void midi_parse(uint8_t x){
 	db_expect = voice_message(runstat);  // prepare db_expect for the next round
 }
 
-int main(int argc, char* argv){
+
+int main(int argc, char** argv){
 	uint8_t x;
+	printf("Enter Midi Message in Hexadecimal:\r\n");
 	while(1){
 		printf("(%02x)", runstat);
 		x = midi_get_byte();
 		midi_parse(x);
 	}
+	exit(0);
 }
