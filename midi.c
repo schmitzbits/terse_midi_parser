@@ -69,7 +69,7 @@ void midi_cont(){
 }
 
 void midi_note_off(uint8_t ch,uint8_t db1, uint8_t db2){
-  printf("note_off %01x,%02x,%02x\n", ch, db1, db2);
+  printf("note_off ch:%01x, note: %02x, vel: %02x\n", ch, db1, db2);
 }
 
 void midi_note_on(uint8_t ch, uint8_t db1, uint8_t db2){
@@ -77,31 +77,31 @@ void midi_note_on(uint8_t ch, uint8_t db1, uint8_t db2){
 	midi_note_off(ch, db1, db2);
 	return;
   }
-   printf("note_on %01x, %02x,%02x\n", ch, db1, db2);
+   printf("note_on ch:%01x, note: %02x, vel: %02x\n", ch, db1, db2);
 }
 void midi_control(uint8_t ch,uint8_t db1, uint8_t db2){
-  printf("midi_control %01x,%02x, %02x\n", ch,  db1, db2);
+  printf("midi_control ch:%01x, cc: %02x, value: %02x\n", ch,  db1, db2);
 }
 
 void midi_aftertouch(uint8_t ch,uint8_t db1, uint8_t db2){
-  printf("midi_aftch %01x,%02x, %02x\n", ch, db1, db2);
+  printf("midi_aftch ch: %01x,%02x, %02x\n", ch, db1, db2);
 }
 void midi_pitchwheel(uint8_t ch,uint8_t db1, uint8_t db2){
-  printf("midi_pitch %01x,%02x, %02x\n", ch, db1, db2);
+  printf("midi_pitch ch: %01x,%02x, %02x\n", ch, db1, db2);
 }
 void midi_patch(uint8_t ch, uint8_t db1){
-  printf("midi_patch %01x,%02x\n", ch, db1);
+  printf("midi_patch ch: %01x,%02x\n", ch, db1);
 }
 void midi_pressure(uint8_t ch, uint8_t db1){
-  printf("midi_pressure %01x,%02x\n", ch, db1);
+  printf("midi_pressure ch:%01x,%02x\n", ch, db1);
 }
 
 void midi_reset(void){
-  printf("midi_reset %02x\n", runstat);
+  printf("midi_reset new running status: %02x\n", runstat);
 }
 
 void sys_realtime(uint8_t ch){
-	printf("sys_realtime(%02x)\n",ch );
+	//printf("sys_realtime(%02x)\n",ch );
 	switch (ch){
 		case MIDI_CLOCK:
 			midi_clock();
@@ -127,7 +127,7 @@ void sys_realtime(uint8_t ch){
 // returns how many message bytes the system common messages expect
 
 uint8_t sys_common(uint8_t ch){
-	printf("sys_common(%02x)\n",ch );
+	//printf("sys_common(%02x)\n",ch );
 	switch (ch){
 		case MIDI_SONG_SEL:
 		case MIDI_MTC:
@@ -183,7 +183,7 @@ void midi_parse(uint8_t x){
 		db_expect = voice_message(runstat);  // how many databytes do follow?
 		return;
 	}
-
+	
 	if (runstat != 0 && db_expect == 2) {
 		db1 = x;		// store into databyte1
 		db_expect = 1;  // one down, one to go
@@ -197,18 +197,21 @@ void midi_parse(uint8_t x){
 		// this gracefully handles SYSEX. 
 		// discard the byte, (or do something with it here)
 		// two things get us out of this state: New Running Status, OR Sysex End
+		
+		// if runstat = 0 then we are possibly waiting for the databyte of a system common message
+		// we silently discard them
+		
 		return; 
 	}
-	
 	// split runstat into message type and channel for convenience
 	uint8_t type = runstat & 0xf0;
 	uint8_t rec_channel = runstat & 0x0f;
 	
-    //adjust if you want to receive on more than one channel
-    if (rec_channel != our_channel) {
-        printf("Message is not for channel 1\n");
-        return;
-    }
+    //adjust if you want to receive only on specific channel
+	//    if (rec_channel != our_channel) {
+	//        printf("Message is not for channel 1\n");
+	//        return;
+	//    }
 
 	// at this point our message is complete, and db1 and db2 hold the respective data bytes
 	// if there is only one byte, since its the last, it is contained in db2
@@ -235,6 +238,8 @@ void midi_parse(uint8_t x){
 		case MIDI_PRESSURE:
 			midi_pressure(rec_channel, db2);
 			break;
+		default:
+			printf("Running Status: %02x, db1: %02x, db2: %02x", runstat, db1, db2);
 		
 	}
 	db_expect = voice_message(runstat);  // prepare db_expect for the next round
